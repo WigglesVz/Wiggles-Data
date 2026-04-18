@@ -6,13 +6,24 @@
 $ErrorActionPreference = "SilentlyContinue"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-# Verificar admin
+# ── Verificar admin ──────────────────────────────────────────────────────────
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
     [Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
     Add-Type -AssemblyName System.Windows.Forms
-    [System.Windows.Forms.MessageBox]::Show(
-        "Abre PowerShell como Administrador.", "Requiere Elevacion", "OK", "Error")
+    [System.Windows.Forms.MessageBox]::Show("Abre PowerShell como Administrador.", "Requiere Elevacion", "OK", "Error")
+    exit
+}
+
+# ── Forzar STA (necesario para WPF/XAML) ────────────────────────────────────
+# irm | iex corre en MTA por defecto, WPF necesita STA.
+# Si ya estamos en STA seguimos normal; si no, nos relanzamos en STA.
+if ([System.Threading.Thread]::CurrentThread.ApartmentState -ne "STA") {
+    Write-Host "  [*] Relanzando en modo STA para WPF..." -ForegroundColor Yellow
+    $ScriptUrl = "https://raw.githubusercontent.com/WigglesVz/Wiggles-Data/master/iniciar.ps1"
+    $TempFile  = "$env:TEMP\WigglesVZ_iniciar.ps1"
+    Invoke-RestMethod -Uri $ScriptUrl -OutFile $TempFile
+    Start-Process powershell.exe -ArgumentList "-STA -NoProfile -ExecutionPolicy Bypass -File `"$TempFile`"" -Verb RunAs
     exit
 }
 
@@ -22,7 +33,7 @@ Write-Host "=============================================" -ForegroundColor Cyan
 Write-Host "      Wiggles VZ 5.0 - Modular Edition      " -ForegroundColor Green
 Write-Host "=============================================" -ForegroundColor Cyan
 
-# Base de modulos — soporta local O remoto
+# ── Base de modulos ──────────────────────────────────────────────────────────
 $BaseUrl  = "https://raw.githubusercontent.com/WigglesVz/Wiggles-Data/master/modules"
 $BasePath = Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) "modules"
 $UseLocal = Test-Path $BasePath
@@ -36,24 +47,22 @@ foreach ($mod in $Modules) {
             $full = Join-Path $BasePath $mod
             if (-not (Test-Path $full)) { throw "No existe $full" }
             . $full
-        }
-        else {
+        } else {
             $code = Invoke-RestMethod -Uri "$BaseUrl/$mod" -ErrorAction Stop
             Invoke-Expression $code
         }
         Write-Host " OK" -ForegroundColor Green
-    }
-    catch {
+    } catch {
         Write-Host " FALLO: $_" -ForegroundColor Red
         Read-Host "Presiona Enter para cerrar"
         exit 1
     }
 }
 
-# Cargar entorno
+# ── Cargar entorno ───────────────────────────────────────────────────────────
 Initialize-HybridEnvironment
-Load-WigglesConfig | Out-Null
+Load-WigglesConfig  | Out-Null
 Load-ProveedoresNube | Out-Null
 
-# Lanzar GUI
+# ── Lanzar GUI ───────────────────────────────────────────────────────────────
 Initialize-WigglesGUI
