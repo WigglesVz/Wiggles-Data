@@ -1,7 +1,6 @@
 # =============================================================================
 # iniciar.ps1 — Orquestador Modular (Wiggles VZ 5.0)
-# Uso local: .\iniciar.ps1
-# Uso remoto: irm https://raw.githubusercontent.com/WigglesVz/Wiggles-Data/main/iniciar.ps1 | iex
+# Uso remoto: irm https://raw.githubusercontent.com/WigglesVz/Wiggles-Data/master/iniciar.ps1 | iex
 # =============================================================================
 
 $ErrorActionPreference = "SilentlyContinue"
@@ -13,18 +12,18 @@ $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIden
 if (-not $isAdmin) {
     Add-Type -AssemblyName System.Windows.Forms
     [System.Windows.Forms.MessageBox]::Show(
-        "Abre PowerShell como Administrador.", "Requiere Elevación", "OK", "Error")
+        "Abre PowerShell como Administrador.", "Requiere Elevacion", "OK", "Error")
     exit
 }
 
 $host.UI.RawUI.WindowTitle = "WIGGLES_VZ 5.0 // MODULAR"
 
 Write-Host "=============================================" -ForegroundColor Cyan
-Write-Host "      Wiggles VZ 5.0 — Modular Edition      " -ForegroundColor Green
+Write-Host "      Wiggles VZ 5.0 - Modular Edition      " -ForegroundColor Green
 Write-Host "=============================================" -ForegroundColor Cyan
 
-# Base de módulos — soporta local O remoto
-$BaseUrl  = "https://raw.githubusercontent.com/WigglesVz/Wiggles-Data/main/modules"
+# Base de modulos — soporta local O remoto
+$BaseUrl  = "https://raw.githubusercontent.com/WigglesVz/Wiggles-Data/master/modules"
 $BasePath = Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) "modules"
 $UseLocal = Test-Path $BasePath
 
@@ -46,6 +45,7 @@ foreach ($mod in $Modules) {
     }
     catch {
         Write-Host " FALLO: $_" -ForegroundColor Red
+        Read-Host "Presiona Enter para cerrar"
         exit 1
     }
 }
