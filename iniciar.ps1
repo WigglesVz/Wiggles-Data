@@ -6,14 +6,16 @@
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 # ── PASO 1: Forzar STA PRIMERO (WPF lo requiere) ────────────────────────────
-# irm | iex corre en MTA. Descargamos el script a TEMP y relanzamos en STA+Admin.
+# irm | iex corre en MTA. Relanzamos con -EncodedCommand para evitar
+# problemas de politica de ejecucion y descarga de archivos temporales.
 if ([System.Threading.Thread]::CurrentThread.ApartmentState -ne "STA") {
     Write-Host "  [*] Relanzando en modo STA+Admin para WPF..." -ForegroundColor Yellow
     $ScriptUrl = "https://raw.githubusercontent.com/WigglesVz/Wiggles-Data/master/iniciar.ps1"
-    $TempFile  = "$env:TEMP\WigglesVZ_iniciar.ps1"
-    Invoke-RestMethod -Uri $ScriptUrl -OutFile $TempFile
+    # Construimos un mini-launcher que descarga y ejecuta el script real, todo en memoria
+    $LaunchCmd = "[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; iex(irm '$ScriptUrl')"
+    $Encoded   = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($LaunchCmd))
     Start-Process powershell.exe `
-        -ArgumentList "-STA -NoProfile -ExecutionPolicy Bypass -File `"$TempFile`"" `
+        -ArgumentList "-STA -NoProfile -ExecutionPolicy Bypass -EncodedCommand $Encoded" `
         -Verb RunAs
     exit
 }
@@ -34,10 +36,10 @@ $host.UI.RawUI.WindowTitle = "WIGGLES_VZ 5.0 // MODULAR"
 Write-Host "=============================================" -ForegroundColor Cyan
 Write-Host "      Wiggles VZ 5.0 - Modular Edition      " -ForegroundColor Green
 Write-Host "=============================================" -ForegroundColor Cyan
+Write-Host "  Modo: STA=$([System.Threading.Thread]::CurrentThread.ApartmentState) | Admin=$isAdmin" -ForegroundColor DarkGray
 
 # ── PASO 3: Cargar modulos ───────────────────────────────────────────────────
 $BaseUrl  = "https://raw.githubusercontent.com/WigglesVz/Wiggles-Data/master/modules"
-# Si hay carpeta modules/ junto al script original usamos local, si no descargamos
 $ScriptDir = if ($MyInvocation.MyCommand.Path) { Split-Path -Parent $MyInvocation.MyCommand.Path } else { $null }
 $BasePath  = if ($ScriptDir) { Join-Path $ScriptDir "modules" } else { $null }
 $UseLocal  = $BasePath -and (Test-Path $BasePath)
