@@ -5,7 +5,7 @@
 
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-# ── PASO 1: Forzar STA PRIMERO (WPF lo requiere) ────────────────────────────
+# ── PASO 1: Forzar STA si es necesario ─────────────────────────────────────
 if ([System.Threading.Thread]::CurrentThread.ApartmentState -ne "STA") {
     Write-Host "  [*] Relanzando en modo STA+Admin para WPF..." -ForegroundColor Yellow
     $ScriptUrl = "https://raw.githubusercontent.com/WigglesVz/Wiggles-Data/master/iniciar.ps1"
@@ -17,7 +17,7 @@ if ([System.Threading.Thread]::CurrentThread.ApartmentState -ne "STA") {
     exit
 }
 
-# ── PASO 2: Verificar admin (ya en STA) ─────────────────────────────────────
+# ── PASO 2: Verificar admin ─────────────────────────────────────────────────
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
     [Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
@@ -27,9 +27,7 @@ if (-not $isAdmin) {
     exit
 }
 
-# ── PASO 3: Precargar ensamblados WPF ANTES de cualquier modulo ────────────────
-# Necesario porque Invoke-Expression no garantiza que Add-Type en el
-# modulo descargado registre el ensamblado antes de usarlo.
+# ── PASO 3: Precargar ensamblados WPF ───────────────────────────────────────
 Write-Host "  [*] Cargando ensamblados WPF..." -ForegroundColor DarkGray
 Add-Type -AssemblyName PresentationFramework
 Add-Type -AssemblyName PresentationCore
@@ -60,10 +58,12 @@ foreach ($mod in $Modules) {
         if ($UseLocal) {
             $full = Join-Path $BasePath $mod
             if (-not (Test-Path $full)) { throw "No existe localmente: $full" }
-            . $full
+            . $full   # dot-source local
         } else {
             $code = Invoke-RestMethod -Uri "$BaseUrl/$mod" -ErrorAction Stop
-            Invoke-Expression $code
+            # dot-source via ScriptBlock para heredar el scope correcto
+            $sb = [ScriptBlock]::Create($code)
+            . $sb
         }
         Write-Host " OK" -ForegroundColor Green
     } catch {
