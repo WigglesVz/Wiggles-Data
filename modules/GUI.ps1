@@ -461,24 +461,90 @@ $XAML.SelectNodes("//*[@Name]") | ForEach-Object {
 }
 
 # --- Helpers visuales ---
+function Update-Status {
+    param([string]$Msg)
+    $Window.Dispatcher.Invoke([Action]{
+        if ($txtStatus) { $txtStatus.Text = $Msg }
+    })
+}
+
+function Show-Msg {
+    param(
+        [string]$Message,
+        [string]$Title = "Wiggles VZ",
+        [string]$Buttons = "OK",
+        [string]$Icon = "Information"
+    )
+    return [System.Windows.Forms.MessageBox]::Show($Message, $Title, $Buttons, $Icon)
+}
+
 function Start-Loading {
     $Window.Dispatcher.Invoke([Action]{
-        if ($progressBar) { $progressBar.Visibility = "Visible"; $progressBar.IsIndeterminate = $true }
+        if ($progressBar) {
+            $progressBar.Visibility = "Visible"
+            $progressBar.IsIndeterminate = $true
+        }
+    })
+}
 
 function Stop-Loading {
     $Window.Dispatcher.Invoke([Action]{
-        if ($progressBar) { $progressBar.IsIndeterminate = $false; $progressBar.Visibility = "Hidden" }
+        if ($progressBar) {
+            $progressBar.IsIndeterminate = $false
+            $progressBar.Visibility = "Hidden"
+        }
+    })
+}
 
 function Invoke-Task {
-    param($Button, $TextRunning, $ScriptBlock, $ConfirmMsg=$null)
-    if ($ConfirmMsg) { if ((Show-Msg $ConfirmMsg "Confirmar Acción" "YesNo" "Question") -eq "No") { return }
+    param(
+        $Button,
+        [string]$TextRunning,
+        [ScriptBlock]$ScriptBlock,
+        [string]$ConfirmMsg = $null
+    )
+    if ($ConfirmMsg) {
+        if ((Show-Msg $ConfirmMsg "Confirmar Acción" "YesNo" "Question") -eq "No") { return }
+    }
+    $OrigText = $Button.Content
+    $Button.Content = $TextRunning
+    $Button.IsEnabled = $false
+    Start-Loading
+    try {
+        & $ScriptBlock
+    } catch {
+        Show-Msg "Error: $_" "Error" "OK" "Error"
+    } finally {
+        $Button.Content = $OrigText
+        $Button.IsEnabled = $true
+        Stop-Loading
+    }
+}
 
 function Test-IsConnected {
-    try { Test-Connection -ComputerName 8.8.8.8 -Count 1 -ErrorAction Stop | Out-Null; return $true }
+    try {
+        Test-Connection -ComputerName 8.8.8.8 -Count 1 -ErrorAction Stop | Out-Null
+        return $true
+    } catch {
+        return $false
+    }
+}
 
 function Test-SerialNumberFormat {
-    param([string]$SerialNumber, [string]$Manufacturer)
-    if (-not $global:manufacturerPatterns.ContainsKey($Manufacturer)) { return @{IsValid=$false; Reason="Desconocido"}
+    param(
+        [string]$SerialNumber,
+        [string]$Manufacturer
+    )
+    if (-not $global:manufacturerPatterns -or -not $global:manufacturerPatterns.ContainsKey($Manufacturer)) {
+        return @{ IsValid = $false; Reason = "Fabricante desconocido" }
+    }
+    $pattern = $global:manufacturerPatterns[$Manufacturer]
+    if ($SerialNumber -match $pattern) {
+        return @{ IsValid = $true; Reason = "OK" }
+    } else {
+        return @{ IsValid = $false; Reason = "No coincide con patrón $Manufacturer" }
+    }
+}
 
 
 # --- Eventos ---
