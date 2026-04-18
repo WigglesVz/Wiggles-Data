@@ -3,40 +3,44 @@
 # Uso remoto: irm https://raw.githubusercontent.com/WigglesVz/Wiggles-Data/master/iniciar.ps1 | iex
 # =============================================================================
 
-$ErrorActionPreference = "SilentlyContinue"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-# ── Verificar admin ──────────────────────────────────────────────────────────
+# ── PASO 1: Forzar STA PRIMERO (WPF lo requiere) ────────────────────────────
+# irm | iex corre en MTA. Descargamos el script a TEMP y relanzamos en STA+Admin.
+if ([System.Threading.Thread]::CurrentThread.ApartmentState -ne "STA") {
+    Write-Host "  [*] Relanzando en modo STA+Admin para WPF..." -ForegroundColor Yellow
+    $ScriptUrl = "https://raw.githubusercontent.com/WigglesVz/Wiggles-Data/master/iniciar.ps1"
+    $TempFile  = "$env:TEMP\WigglesVZ_iniciar.ps1"
+    Invoke-RestMethod -Uri $ScriptUrl -OutFile $TempFile
+    Start-Process powershell.exe `
+        -ArgumentList "-STA -NoProfile -ExecutionPolicy Bypass -File `"$TempFile`"" `
+        -Verb RunAs
+    exit
+}
+
+# ── PASO 2: Verificar admin (ya en STA) ─────────────────────────────────────
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
     [Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
     Add-Type -AssemblyName System.Windows.Forms
-    [System.Windows.Forms.MessageBox]::Show("Abre PowerShell como Administrador.", "Requiere Elevacion", "OK", "Error")
+    [System.Windows.Forms.MessageBox]::Show(
+        "Ejecuta PowerShell como Administrador.", "Requiere Elevacion", "OK", "Error")
     exit
 }
 
-# ── Forzar STA (necesario para WPF/XAML) ────────────────────────────────────
-# irm | iex corre en MTA por defecto, WPF necesita STA.
-# Si ya estamos en STA seguimos normal; si no, nos relanzamos en STA.
-if ([System.Threading.Thread]::CurrentThread.ApartmentState -ne "STA") {
-    Write-Host "  [*] Relanzando en modo STA para WPF..." -ForegroundColor Yellow
-    $ScriptUrl = "https://raw.githubusercontent.com/WigglesVz/Wiggles-Data/master/iniciar.ps1"
-    $TempFile  = "$env:TEMP\WigglesVZ_iniciar.ps1"
-    Invoke-RestMethod -Uri $ScriptUrl -OutFile $TempFile
-    Start-Process powershell.exe -ArgumentList "-STA -NoProfile -ExecutionPolicy Bypass -File `"$TempFile`""
-    exit
-}
-
+$ErrorActionPreference = "SilentlyContinue"
 $host.UI.RawUI.WindowTitle = "WIGGLES_VZ 5.0 // MODULAR"
 
 Write-Host "=============================================" -ForegroundColor Cyan
 Write-Host "      Wiggles VZ 5.0 - Modular Edition      " -ForegroundColor Green
 Write-Host "=============================================" -ForegroundColor Cyan
 
-# ── Base de modulos ──────────────────────────────────────────────────────────
+# ── PASO 3: Cargar modulos ───────────────────────────────────────────────────
 $BaseUrl  = "https://raw.githubusercontent.com/WigglesVz/Wiggles-Data/master/modules"
-$BasePath = Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) "modules"
-$UseLocal = Test-Path $BasePath
+# Si hay carpeta modules/ junto al script original usamos local, si no descargamos
+$ScriptDir = if ($MyInvocation.MyCommand.Path) { Split-Path -Parent $MyInvocation.MyCommand.Path } else { $null }
+$BasePath  = if ($ScriptDir) { Join-Path $ScriptDir "modules" } else { $null }
+$UseLocal  = $BasePath -and (Test-Path $BasePath)
 
 $Modules = @("Cloud.ps1", "Tweaks.ps1", "AutoPilot.ps1", "GUI.ps1")
 
@@ -45,7 +49,7 @@ foreach ($mod in $Modules) {
     try {
         if ($UseLocal) {
             $full = Join-Path $BasePath $mod
-            if (-not (Test-Path $full)) { throw "No existe $full" }
+            if (-not (Test-Path $full)) { throw "No existe localmente: $full" }
             . $full
         } else {
             $code = Invoke-RestMethod -Uri "$BaseUrl/$mod" -ErrorAction Stop
@@ -53,16 +57,17 @@ foreach ($mod in $Modules) {
         }
         Write-Host " OK" -ForegroundColor Green
     } catch {
+        $ErrorActionPreference = "Continue"
         Write-Host " FALLO: $_" -ForegroundColor Red
         Read-Host "Presiona Enter para cerrar"
         exit 1
     }
 }
 
-# ── Cargar entorno ───────────────────────────────────────────────────────────
+# ── PASO 4: Cargar entorno ───────────────────────────────────────────────────
 Initialize-HybridEnvironment
-Load-WigglesConfig  | Out-Null
+Load-WigglesConfig   | Out-Null
 Load-ProveedoresNube | Out-Null
 
-# ── Lanzar GUI ───────────────────────────────────────────────────────────────
+# ── PASO 5: Lanzar GUI ───────────────────────────────────────────────────────
 Initialize-WigglesGUI
