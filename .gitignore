@@ -1,0 +1,14 @@
+# Backups locales
+backup_pre_migracion_*/
+
+# ⚠️ CREDENCIALES — NUNCA en repo público
+Config.json
+
+# Node
+node_modules/
+package-lock.json
+
+# Scripts temporales de migración
+reorganizar_*.sh
+subir_wiggles.sh
+wiggles_deploy.sh

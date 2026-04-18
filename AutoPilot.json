@@ -1,0 +1,22 @@
+{
+  "Dell": {
+    "nombre": "Dell SupportAssist",
+    "silentArgs": "/s /v\"/qn\""
+  },
+  "HP": {
+    "nombre": "HP Support Assistant",
+    "silentArgs": "SPECIAL_HP"
+  },
+  "Lenovo": {
+    "nombre": "Lenovo Vantage",
+    "silentArgs": "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART"
+  },
+  "Acer": {
+    "nombre": "Acer Care Center",
+    "silentArgs": "/silent"
+  },
+  "ASUS": {
+    "nombre": "MyASUS",
+    "silentArgs": "/S"
+  }
+}

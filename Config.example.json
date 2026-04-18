@@ -1,0 +1,7 @@
+{
+  "_nota": "Sube este archivo como Config.json en un repo PRIVADO llamado Wiggles-Config",
+  "TelegramToken":      "REEMPLAZA_CON_NUEVO_TOKEN_DE_BOTFATHER",
+  "TelegramChatID":     "693806254",
+  "GoogleSheetsUrl":    "https://script.google.com/macros/s/TU_SCRIPT_ID/exec",
+  "ProveedoresJsonUrl": "https://raw.githubusercontent.com/WigglesVz/Wiggles-Data/main/Proveedores.json"
+}

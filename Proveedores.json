@@ -1,0 +1,47 @@
+[
+  {
+    "ID": 0,
+    "Nombre": "Genérico / Particular",
+    "Garantia_Dias": 1
+  },
+  {
+    "ID": 1,
+    "Nombre": "First System",
+    "Garantia_Dias": 90
+  },
+  {
+    "ID": 2,
+    "Nombre": "Corporación TLT",
+    "Garantia_Dias": 90
+  },
+  {
+    "ID": 3,
+    "Nombre": "Indatech",
+    "Garantia_Dias": 90
+  },
+  {
+    "ID": 4,
+    "Nombre": "OrionTech",
+    "Garantia_Dias": 90
+  },
+  {
+    "ID": 5,
+    "Nombre": "Marerca Servibox",
+    "Garantia_Dias": 90
+  },
+  {
+    "ID": 6,
+    "Nombre": "Jeancar",
+    "Garantia_Dias": 90
+  },
+  {
+    "ID": 7,
+    "Nombre": "Kode",
+    "Garantia_Dias": 90
+  },
+  {
+    "ID": 8,
+    "Nombre": "Carlos Viera",
+    "Garantia_Dias": 90
+  }
+]
