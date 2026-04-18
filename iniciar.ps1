@@ -6,12 +6,9 @@
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 # ── PASO 1: Forzar STA PRIMERO (WPF lo requiere) ────────────────────────────
-# irm | iex corre en MTA. Relanzamos con -EncodedCommand para evitar
-# problemas de politica de ejecucion y descarga de archivos temporales.
 if ([System.Threading.Thread]::CurrentThread.ApartmentState -ne "STA") {
     Write-Host "  [*] Relanzando en modo STA+Admin para WPF..." -ForegroundColor Yellow
     $ScriptUrl = "https://raw.githubusercontent.com/WigglesVz/Wiggles-Data/master/iniciar.ps1"
-    # Construimos un mini-launcher que descarga y ejecuta el script real, todo en memoria
     $LaunchCmd = "[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; iex(irm '$ScriptUrl')"
     $Encoded   = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($LaunchCmd))
     Start-Process powershell.exe `
@@ -30,6 +27,17 @@ if (-not $isAdmin) {
     exit
 }
 
+# ── PASO 3: Precargar ensamblados WPF ANTES de cualquier modulo ────────────────
+# Necesario porque Invoke-Expression no garantiza que Add-Type en el
+# modulo descargado registre el ensamblado antes de usarlo.
+Write-Host "  [*] Cargando ensamblados WPF..." -ForegroundColor DarkGray
+Add-Type -AssemblyName PresentationFramework
+Add-Type -AssemblyName PresentationCore
+Add-Type -AssemblyName WindowsBase
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+[void][System.Reflection.Assembly]::LoadWithPartialName('PresentationFramework')
+
 $ErrorActionPreference = "SilentlyContinue"
 $host.UI.RawUI.WindowTitle = "WIGGLES_VZ 5.0 // MODULAR"
 
@@ -38,7 +46,7 @@ Write-Host "      Wiggles VZ 5.0 - Modular Edition      " -ForegroundColor Green
 Write-Host "=============================================" -ForegroundColor Cyan
 Write-Host "  Modo: STA=$([System.Threading.Thread]::CurrentThread.ApartmentState) | Admin=$isAdmin" -ForegroundColor DarkGray
 
-# ── PASO 3: Cargar modulos ───────────────────────────────────────────────────
+# ── PASO 4: Cargar modulos ───────────────────────────────────────────────────
 $BaseUrl  = "https://raw.githubusercontent.com/WigglesVz/Wiggles-Data/master/modules"
 $ScriptDir = if ($MyInvocation.MyCommand.Path) { Split-Path -Parent $MyInvocation.MyCommand.Path } else { $null }
 $BasePath  = if ($ScriptDir) { Join-Path $ScriptDir "modules" } else { $null }
@@ -66,10 +74,10 @@ foreach ($mod in $Modules) {
     }
 }
 
-# ── PASO 4: Cargar entorno ───────────────────────────────────────────────────
+# ── PASO 5: Cargar entorno ───────────────────────────────────────────────────
 Initialize-HybridEnvironment
 Load-WigglesConfig   | Out-Null
 Load-ProveedoresNube | Out-Null
 
-# ── PASO 5: Lanzar GUI ───────────────────────────────────────────────────────
+# ── PASO 6: Lanzar GUI ────────────────────────────────────────────────────────
 Initialize-WigglesGUI
