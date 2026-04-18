@@ -23,7 +23,7 @@ if ([System.Threading.Thread]::CurrentThread.ApartmentState -ne "STA") {
     $ScriptUrl = "https://raw.githubusercontent.com/WigglesVz/Wiggles-Data/master/iniciar.ps1"
     $TempFile  = "$env:TEMP\WigglesVZ_iniciar.ps1"
     Invoke-RestMethod -Uri $ScriptUrl -OutFile $TempFile
-    Start-Process powershell.exe -ArgumentList "-STA -NoProfile -ExecutionPolicy Bypass -File `"$TempFile`"" -Verb RunAs
+    Start-Process powershell.exe -ArgumentList "-STA -NoProfile -ExecutionPolicy Bypass -File `"$TempFile`""
     exit
 }
 
